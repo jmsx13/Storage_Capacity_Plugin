@@ -1,0 +1,32 @@
+Storage:
+  - name: storage-capacity
+    label: Storage Capacity
+    description: Calculates the potential storage capacity of electricity and hydrogen in a building using CEA.
+    interfaces: [cli, dashboard]
+    module: cea_storage_capacity.storage_capacity
+    parameters: ["general:scenario",
+                 "storage-potential:calculate-performance-pb",
+                 "storage-potential:pv-potential-used",
+                 "storage-potential:power-capacity",
+                 "storage-potential:rated-voltage",
+                 "storage-potential:battery-capacity",
+                 "storage-potential:maximum-discharge",
+                 "storage-potential:conversion-efficiency",
+                 "storage-potential:calculate-performance-sc",
+                 "storage-potential:sc-potential-used",
+                 "storage-potential:water-capacity",
+                 "storage-potential:heat-capacity",
+                 "storage-potential:inlet-temperature",
+                 "storage-potential:outlet-temperature",
+                 "storage-potential:max-temperature",
+                 "storage-potential:loss-coefficient",
+                 "storage-potential:calculate-performance-h2",
+                 "storage-potential:h2-conversion-efficiency",
+                 "storage-potential:energy-density",
+                 "storage-potential:tank-capacity",
+                 "storage-potential:fuel-economy",
+                 "storage-potential:vehicle-km-travelled",
+                 "storage-potential:carbon-emissions"]
+    input-files:
+      - [get_total_demand]
+      - [PV_total_buildings]
