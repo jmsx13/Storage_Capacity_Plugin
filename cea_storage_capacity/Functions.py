@@ -1,5 +1,4 @@
 import os
-#import numpy as np
 
 __author__ = "Jaime Cevallos-Sierra"
 __copyright__ = "Copyright 2022, IN+ - Instituto Superior Técnico"
@@ -19,22 +18,13 @@ def Sum_Content(kWh_list):
     pass
 
 
-def Sum_Stored(kWh_PB, kWh_Demand, Qmax):
-    suma = 0.0
-    lista = []
+def Sum_Stored(kWh_PB):
+    sumS = 0.0
     for i in range(len(kWh_PB)):
         if float(kWh_PB[i]) > float(kWh_PB[i-1]):
-            suma += (float(kWh_PB[i]) - float(kWh_PB[i-1]))
-            lista.append(suma)
-        else:
-            if float(kWh_PB[i]) == Qmax:
-                if float(kWh_Demand[i]) > 0:
-                    suma += float(kWh_Demand[i])
-                    lista.append(suma)
-                else: lista.append(suma)
-            else: lista.append(suma)
+            sumS += (float(kWh_PB[i]) - float(kWh_PB[i - 1]))
 
-    return lista[len(lista)-1]
+    return sumS
     pass
 
 
@@ -42,7 +32,8 @@ def add(data):
     s = 0.0
     for n in data:
         s = s + float(n)
-    return round(s,2)
+    if s: return round(s,2)
+    else: return 0
 
 
 def normalize_list(data):
@@ -61,13 +52,8 @@ def AV_store(stored, limit, vol):
 
 
 def ambient_Loss(max, min, area, coefficient):
-    return round(coefficient * area * (float(max) - float(min)) / 1000, 3)
-
-
-"""def get_random(mean, stdev):
-    random = np.random.normal(mean, stdev)
-    if random < 0: random = 0
-    return random"""
+    if area > 0: return round(coefficient * area * (float(max) - float(min)) / 1000, 3)
+    else: return 0
 
 
 def Estimate_Vehicles(people, rate):
@@ -108,8 +94,11 @@ def get_path_sc(input_path, name, value):
         # BUILDING DEMAND FOLDER
         output_path = os.path.dirname(input_path) + "\\outputs\\data\\demand\\" + name + ".csv"
     elif value == 3:
-        # BUILDING SOURCE FILE
+        # BUILDING EVACUATED TUBE SOURCE FILE
         output_path = os.path.dirname(input_path) + "\\outputs\\data\\potentials\\solar\\" + name + "_SC_ET.csv"
+    elif value == 4:
+        # BUILDING FLAT PANEL SOURCE FILE
+        output_path = os.path.dirname(input_path) + "\\outputs\\data\\potentials\\solar\\" + name + "_SC_FP.csv"
     else:
         output_path = "Error!!!"
 
@@ -132,23 +121,3 @@ def get_path_h2(input_path, name, value):
         output_path = "Error!!!"
 
     return output_path
-
-
-"""
-def get_path(input_path, name, value, s):
-    if value == 'F':
-        # OUTPUT FOLDER PATH
-        output_path = os.path.dirname(input_path) + "\\outputs\\data\\storage-capacity\\"
-    elif value == 1:
-        # OUTPUT STORAGE FOLDER
-        output_path = os.path.dirname(input_path) + "\\outputs\\data\\storage-capacity\\" + name + "_ST.csv"
-    elif value == 2:
-        # DEMAND FOLDER
-        output_path = os.path.dirname(input_path) + "\\outputs\\data\\demand\\" + name + ".csv"
-    elif value == 3:
-        # PV POTENTIAL FOLDER
-        output_path = os.path.dirname(input_path) + "\\outputs\\data\\potentials\\solar\\" + name + "_PV.csv"
-    else:
-        output_path = "None"
-    return output_path
-"""

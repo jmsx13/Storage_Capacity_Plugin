@@ -2,12 +2,12 @@ from setuptools import setup, find_packages
 
 __author__ = 'Jaime Cevallos Sierra'
 __copyright__ = "Copyright 2022, IN+ - Instituto Superior Técnico"
-__credits__ = ["IN+ - Instituto Superior Técnico/Jaime Cevallos Sierra"]  # type: List[str]
+__credits__ = ["IN+ - Instituto Superior Técnico/Jaime Cevallos Sierra"]
+__license__ = "MIT"
+__version__ = "1.0.0"
 __maintainer__ = "Jaime Cevallos Sierra"
 __email__ = "jaime.cevallos@tecnico.ulisboa.pt / jmsx13@gmail.com"
 __status__ = "Production"
-
-from typing import List
 
 setup(name='cea_storage_capacity',
       version=__version__,

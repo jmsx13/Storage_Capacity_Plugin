@@ -59,8 +59,6 @@ def bank_potential(energy_demand_df, input_path, potential, per_capita, voltage,
                                                                                           max_discharge,
                                                                                           conversion_ef)
 
-            kWh_sto_total = fun.Sum_Stored(kWh_PB, kWh_demand, kWh_stored)
-
             writer.writerow(labels)
             linea = zip(date,
                         kWh_demand,
@@ -82,7 +80,7 @@ def bank_potential(energy_demand_df, input_path, potential, per_capita, voltage,
         building_maxstr.append(round(kWh_stored, 3))
         building_cons.append(fun.add(fun.normalize_list(kWh_requested)))
         building_sto.append(fun.add(fun.normalize_list(kWh_av_store)))
-        building_pb_stored.append(round(kWh_sto_total,3))
+        building_pb_stored.append(round(fun.Sum_Stored(kWh_PB),2))
         building_grd_bgt.append(fun.add(kWh_bought))
         building_grd_sld.append(fun.add(kWh_sold))
         building_cnv_lss.append(fun.add(kWh_loss))
@@ -243,6 +241,12 @@ def Calculate_PB_Performance(Electric_demand, PV_supply, str_capacity, voltage, 
                             Buy_GRID.append(round(0.0, 3))
                             Sell_GRID.append(round(0.0, 3))
                             Conv_Loss.append(round((1 - conversion_eff) * float(PV_supply[i]), 3))
+        else:
+            PowerBank.append(round(0.0, 3))
+            Buy_GRID.append(round(0.0, 3))
+            Sell_GRID.append(round(conversion_eff * float(PV_supply[i]), 3))
+            Conv_Loss.append(round((1 - conversion_eff) * float(PV_supply[i]), 3))
+
 
     return PowerBank, Buy_GRID, Sell_GRID, Conv_Loss, max_value * voltage / 1000
     pass

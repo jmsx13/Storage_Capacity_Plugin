@@ -12,21 +12,21 @@ __status__ = "Production"
 
 def hydrogen_production(ww_demand_df, input_path, efficiency, density, capacity, economy, vehicle_kmt, co2_emission, case):
     labels = ["Date",
+              "E_demand_kWh",
               "E_available_kWh",
-              "H2_produced_Kg",
-              "O2_produced_Kg",
-              "H2O_needed_Kg",
-              "co2_avoided",
-              "E_conv_loss_kWh",
-              "H2_str_loss_kg",
-              "H2_supply_kg",
-              "D_travelled_Km",
-              "Av_FCVs_sup_d",
-              "CO2_avoided_kg"]
+              "H2_produced_kg",
+              "H2_stored_kg",
+              "H2_demand_kg",
+              "FC_supply_kWh",
+              "E_bgt_fc_kWh",
+              "E_sld_fc_kWh",
+              "Elyzer_lss_kWh",
+              "Cogen_lss_kWh"]
     result_df = ww_demand_df[["Name"]].copy()
-    building_ava, building_h2_prod, building_o2_prod, building_h2o_need = [], [], [], []
-    building_avn_fcv, building_max_str, building_co2_avd, building_cons = [], [], [], []
-    building_con_loss, building_str_loss, building_h2_sup = [], [], []
+    building_demand, building_available = [], []
+    building_h2_production, building_h2_stored, building_h2_demand = [], [], []
+    building_fc_supply, building_bgt_grid, building_sld_grid = [], [], []
+    building_elz_loss, building_fc_loss = [], []
     count = 0
 
     if not os.path.exists(fun.get_path_h2(input_path, '', 'F')): os.makedirs(fun.get_path_h2(input_path, '', 'F'))
@@ -41,143 +41,203 @@ def hydrogen_production(ww_demand_df, input_path, efficiency, density, capacity,
             if case:
                 with open(fun.get_path_h2(input_path, name, 3), 'r') as file_DM:
                     kWh_available = [row['E_sld_GRID_kWh'] for row in csv.DictReader(file_DM)]
+                with open(fun.get_path_h2(input_path, name, 3), 'r') as file_DM:
+                    kWh_demand = [row['E_bgt_GRID_kWh'] for row in csv.DictReader(file_DM)]
             else:
                 with open(fun.get_path_h2(input_path, name, 2), 'r') as file_H2:
                     kWh_available = [row['E_PV_gen_kWh'] for row in csv.DictReader(file_H2)]
+                with open(fun.get_path_h2(input_path, name, 3), 'r') as file_DM:
+                    kWh_demand = [row['GRID_kWh'] for row in csv.DictReader(file_DM)]
 
-            h2_produced, o2_produced, h2o_needed, h2_con_losses = H2_production(kWh_available, density, efficiency)
-            tank_performance, h2_str_losses, h2_supplied, max_stored = H2_supply_cap(date, h2_produced, capacity)
-            dist_travelled, FCVs_supplied, co2_avoided = H2_supply_results(h2_supplied, economy, vehicle_kmt, co2_emission)
+            h2_produced, elyzer_loss, h2_tank, h2_demand, fc_demand, fc_loss, \
+            pb_fc_sold, pb_fc_bought = H2_Storage_Cogen(kWh_available,
+                                                        density,
+                                                        90,
+                                                        8.6,
+                                                        90,
+                                                        kWh_demand,
+                                                        capacity)
 
             writer.writerow(labels)
             linea = zip(date,
+                        kWh_demand,
                         kWh_available,
                         h2_produced,
-                        o2_produced,
-                        h2o_needed,
-                        tank_performance,
-                        h2_con_losses,
-                        h2_str_losses,
-                        h2_supplied,
-                        dist_travelled,
-                        FCVs_supplied,
-                        co2_avoided)
+                        h2_tank,
+                        h2_demand,
+                        fc_demand,
+                        pb_fc_bought,
+                        pb_fc_sold,
+                        elyzer_loss,
+                        fc_loss)
             for row in linea: writer.writerow(row)
 
         result_df['Name'][count] = name
-        building_ava.append(fun.add(kWh_available))
-        building_h2_prod.append(fun.add(h2_produced))
-        building_o2_prod.append(fun.add(o2_produced))
-        building_h2o_need.append(fun.add(h2o_needed))
-        building_con_loss.append(fun.add(h2_con_losses))
-        building_str_loss.append(fun.add(h2_str_losses))
-        building_max_str.append(max_stored)
-        building_h2_sup.append(fun.add(h2_supplied))
-        building_cons.append(fun.add(dist_travelled))
-        building_avn_fcv.append(round(fun.add(FCVs_supplied) / 365,1))
-        building_co2_avd.append(round(fun.add(co2_avoided)/1000,3))
+        building_demand.append(fun.add(kWh_demand))
+        building_available.append(fun.add(kWh_available))
+        building_h2_production.append(fun.add(h2_produced))
+        building_h2_stored.append(fun.Sum_Stored(h2_tank))
+        building_h2_demand.append(fun.add(h2_demand))
+        building_fc_supply.append(fun.add(fc_demand))
+        building_bgt_grid.append(fun.add(pb_fc_bought))
+        building_sld_grid.append(fun.add(pb_fc_sold))
+        building_elz_loss.append(fun.add(elyzer_loss))
+        building_fc_loss.append(fun.add(fc_loss))
         count += 1
 
         date.clear()
         kWh_available.clear()
 
-    result_df['E_available_kWh'] = building_ava
-    result_df['H2_produced_kg'] = building_h2_prod
-    result_df['O2_produced_kg'] = building_o2_prod
-    result_df['H2O_required_kg'] = building_h2o_need
-    result_df['E_con_losses_kWh'] = building_con_loss
-    result_df['H2_str_losses_kg'] = building_str_loss
-    result_df['Max_stored_kg'] = building_max_str
-    result_df['D_travelled_km'] = building_cons
-    result_df['Av_num_vehicles'] = building_avn_fcv
-    result_df['CO2_avoided_Ton'] = building_co2_avd
+    result_df['E_demand_kWh'] = building_demand
+    result_df['E_available_kWh'] = building_available
+    result_df['H2_produced_kg'] = building_h2_production
+    result_df['H2_stored_kg'] = building_h2_stored
+    result_df['H2_demand_kg'] = building_h2_demand
+    result_df['E_fc_supply_kWh'] = building_fc_supply
+    result_df['E_bgt_grid_kWh'] = building_bgt_grid
+    result_df['E_sld_grid_kWh'] = building_sld_grid
+    result_df['E_elz_loss_kWh'] = building_elz_loss
+    result_df['E_fc_loss_kWh'] = building_fc_loss
 
     return result_df
 
+def H2_Storage_Cogen (available_kWh, density, Elyzer_eff, Compr_req, FC_eff, demand_kWh, max_capacity):
+    H2_produced, H2_tank, H2_demand = [], [], []
+    E_fc_demand, Elyzer_loss, E_fc_loss = [], [], []
+    E_fc_sold, E_fc_bought = [], []
 
-def H2_supply_results(H2_supply, fuel_economy, vehicle_kmt, co2_emissions):
-    km_travelled, fcvs_supplied, co2_avoided = [], [], []
+    for i in range(len(available_kWh)):
 
-    for i in range(len(H2_supply)):
-        if H2_supply[i] > 0:
-            km_travelled.append(round(H2_supply[i] * fuel_economy, 3))
-            fcvs_supplied.append(round(H2_supply[i] * fuel_economy/vehicle_kmt,1))
-            co2_avoided.append(round(H2_supply[i] * fuel_economy/co2_emissions,3))
-        else:
-            km_travelled.append(round(0.0, 3))
-            fcvs_supplied.append(round(0.0, 1))
-            co2_avoided.append(round(0.0, 3))
-
-    return km_travelled, fcvs_supplied, co2_avoided
-
-
-def H2_supply_cap(date, h2_produced, max_capacity):
-    H2_tank_str, H2_str_loss, H2_supply = [], [], []
-    max_stored = 0
-    time = 23
-
-    for i in range(len(h2_produced)):
-
-        data = date[i].rsplit(' ', 1)
-        tempo = data[1].split(':')
-
-        ###  SIMULATING SUPPLY  ###
+        ### CALCULATE HYDROGEN PRODUCTION TO TANK
         try:
-            if float(tempo[0]) == float(time):
-                H2_tank_str.append(round(0.0, 3))
-                H2_str_loss.append(round(0.0, 3))
-                H2_supply.append(round(H2_tank_str[i-1], 3))
+            if H2_tank[i - 1] < max_capacity:
+                Elyzer_loss.append(round(float(available_kWh[i]) * (1 - Elyzer_eff / 100), 3))
+                H2_produced.append(round(float(available_kWh[i]) / ((density / (Elyzer_eff / 100)) + Compr_req), 3))
             else:
-                if h2_produced[i] > 0:
-                    if H2_tank_str[i - 1] + float(h2_produced[i]) > max_capacity:
-                        H2_tank_str.append(round(max_capacity,3))
-                        H2_str_loss.append(round(float(h2_produced[i]) - (max_capacity - H2_tank_str[i-1]),3))
-                        H2_supply.append(round(0.0, 3))
-                    else:
-                        H2_tank_str.append(round(H2_tank_str[i-1] + float(h2_produced[i]), 3))
-                        H2_str_loss.append(round(0.0, 3))
-                        H2_supply.append(round(0.0, 3))
-                else:
-                    H2_tank_str.append(round(H2_tank_str[i - 1], 3))
-                    H2_str_loss.append(round(0.0, 3))
-                    H2_supply.append(round(0.0, 3))
-
+                Elyzer_loss.append(round(0.0, 3))
+                H2_produced.append(round(0.0, 3))
         except:
-            if h2_produced[i] > 0:
-                if float(h2_produced[i]) < max_capacity:
-                    H2_tank_str.append(round(h2_produced[i], 3))
-                    H2_str_loss.append(round(0.0, 3))
-                    H2_supply.append(round(0.0, 3))
+            Elyzer_loss.append(round(float(available_kWh[i]) * (1 - Elyzer_eff / 100), 3))
+            H2_produced.append(round(float(available_kWh[i]) / ((density / (Elyzer_eff / 100)) + Compr_req), 3))
+
+
+        ### FILLING THE TANK / COMPRESSION
+        try:
+            if H2_produced[i] > 0:
+                if H2_tank[i-1] + H2_produced[i] - (float(demand_kWh[i]) * (2 - FC_eff / 100)) / (density * FC_eff / 100) > max_capacity:
+                    H2_tank.append(round(max_capacity,3))
+                    E_fc_sold.append(round(float(available_kWh[i]) - (H2_tank[i] - H2_tank[i-1])*density*Elyzer_eff/100, 3))
+                    H2_produced[i] = round(H2_tank[i] - H2_tank[i-1],3)
                 else:
-                    H2_tank_str.append(round(max_capacity, 3))
-                    H2_str_loss.append(round(h2_produced[i] - max_capacity, 3))
-                    H2_supply.append(round(0.0, 3))
+                    H2_tank.append(round(H2_tank[i - 1] + H2_produced[i], 3))
+                    E_fc_sold.append(round(0.0, 3))
             else:
-                H2_tank_str.append(round(0.0, 3))
-                H2_str_loss.append(round(0.0, 3))
-                H2_supply.append(round(0.0, 3))
-
-        if H2_tank_str[i] > max_stored: max_stored = H2_tank_str[i]
-
-        #print("i:", i, ": ", len(H2_supply), len(Tank_state), len(H2_str_loss), len(Km_travelled))
-
-    return H2_tank_str, H2_str_loss, H2_supply, max_stored
+                H2_tank.append(round(H2_tank[i - 1], 3))
+                E_fc_sold.append(round(float(available_kWh[i]), 3))
+        except:
+            H2_tank.append(round(0.0, 3))
+            E_fc_sold.append(round(0.0, 3))
 
 
-def H2_production(E_available, density, efficiency):
-    h2_produced,  o2_produced, h2o_needed, E_conv_loss = [], [], [], []
+        ### CALCULATE HYDROGEN DEMAND FROM FUEL CELL
+        try:
+            if H2_tank[i] > 0:
+                if H2_tank[i] > (float(demand_kWh[i]) * (2 - FC_eff / 100)) / (density * FC_eff / 100):
+                    E_fc_loss.append(round(float(demand_kWh[i]) * (1 - FC_eff / 100), 3))
+                    E_fc_demand.append(round(float(demand_kWh[i]) + E_fc_loss[i], 3))
+                    H2_demand.append(round(E_fc_demand[i] / (density * FC_eff / 100), 3))
+                else:
+                    E_fc_loss.append(round(H2_tank[i] * (1 - FC_eff / 100), 3))
+                    E_fc_demand.append(round(H2_tank[i] + E_fc_loss[i], 3))
+                    H2_demand.append(round(H2_tank[i], 3))
+            else:
+                E_fc_loss.append(round(0.0, 3))
+                E_fc_demand.append(round(0.0, 3))
+                H2_demand.append(round(0.0, 3))
+        except:
+            E_fc_loss.append(round(0.0, 3))
+            E_fc_demand.append(round(0.0, 3))
+            H2_demand.append(round(0.0, 3))
 
-    for i in range(len(E_available)):
-        if float(E_available[i]) > 0:
-            h2_produced.append(round(float(E_available[i]) * 1 * efficiency / (density * 100), 3))
-            o2_produced.append(round(float(E_available[i]) * 8 * efficiency / (density * 100), 3))
-            h2o_needed.append(round(float(E_available[i]) * 9 * efficiency / (density * 100), 3))
-            E_conv_loss.append(round(float(E_available[i]) * (1 - efficiency/100),3))
-        else:
-            h2_produced.append(round(0.0, 3))
-            o2_produced.append(round(0.0, 3))
-            h2o_needed.append(round(0.0, 3))
-            E_conv_loss.append(round(0.0, 3))
 
-    return h2_produced, o2_produced, h2o_needed, E_conv_loss
+        ### SUPPLYING TO FUEL CELL / RELEASE
+        try:
+            if H2_tank[i] > H2_demand[i]:
+                E_fc_bought.append(round(0.0, 3))
+                H2_tank[i] = round(H2_tank[i] - H2_demand[i], 3)
+            else:
+                E_fc_bought.append(round(float(demand_kWh[i]) - H2_tank[i] * density * FC_eff / 100, 3))
+                H2_tank[i] = 0
+        except:
+            E_fc_bought.append(round(float(demand_kWh[i]), 3))
+
+        """
+        ### CALCULATE HYDROGEN PRODUCTION TO TANK
+                
+        ### CALCULATE HYDROGEN DEMAND FROM FUEL CELL
+        try:
+            if H2_tank[i-1] > 0:
+                if (H2_tank[i-1] * density * FC_eff/100) > float(demand_kWh):
+                    E_fc_loss.append(round(float(demand_kWh[i]) * (1 - FC_eff/100), 3))
+                    E_fc_demand.append(round(float(demand_kWh[i]) + E_fc_loss[i], 3))
+                else:
+                    E_fc_loss.append(round(H2_tank[i-1] * density * (1 - FC_eff/100), 3))
+                    E_fc_demand.append(round(H2_tank[i-1] * density * FC_eff/100, 3))
+                H2_demand.append(round(E_fc_demand[i] / (density * FC_eff/100), 3))
+            else:
+                E_fc_loss.append(round(0.0, 3))
+                E_fc_demand.append(round(0.0, 3))
+                H2_demand.append(round(0.0, 3))
+        except:
+            E_fc_loss.append(round(0.0, 3))
+            E_fc_demand.append(round(0.0, 3))
+            H2_demand.append(round(0.0, 3))
+
+        ### FILLING THE TANK / COMPRESSION
+        try:
+            if H2_tank[i - 1] + H2_produced[i] - H2_demand[i] > max_capacity:
+                H2_tank.append(round(max_capacity, 3))
+                E_fc_sold.append(round(float(available_kWh[i]) - (H2_produced[i] + H2_tank[i-1] - max_capacity) * density * FC_eff/100, 3))
+            else:
+                H2_tank.append(round(H2_tank[i - 1] + H2_produced[i], 3))
+                if available_kWh[i] > 0: E_fc_sold.append(round(available_kWh[i], 3))
+                else: E_fc_sold.append(round(0.0, 3))
+        except:
+            H2_tank.append(round(H2_produced[i], 3))
+            E_fc_sold.append(round(0.0, 3))
+
+        
+        try:
+            if H2_tank[i-1] + H2_produced[i] - H2_demand[i] > max_capacity:
+                H2_tank.append(round(max_capacity,3))
+                E_fc_sold.append(round(float(available_kWh[i]) - (H2_produced[i] + H2_tank[i-1] - max_capacity) * density * FC_eff/100,3))
+            else:
+                H2_tank.append(round(H2_tank[i-1] + H2_produced[i], 3))
+                E_fc_sold.append(round(0.0, 3))
+        except:
+            H2_tank.append(round(H2_produced[i], 3))
+            E_fc_sold.append(round(0.0, 3))
+        
+        ### SUPPLYING TO FUEL CELL / RELEASE
+        try:
+            if H2_tank[i - 1] > H2_demand[i]:
+                E_fc_bought.append(round(0.0, 3))
+            else:
+                E_fc_bought.append(round(0.0, 3))
+        except:
+            E_fc_bought.append(round(0.0, 3))
+        """
+        """ 
+        try:
+            if H2_tank[i-1] > H2_demand[i]:
+                E_fc_bought.append(round(0.0, 3))
+                H2_tank[i] = round(H2_tank[i] - H2_demand[i], 3)
+            else:
+                E_fc_bought.append(round(float(demand_kWh[i]) - H2_tank[i] * density * FC_eff/100, 3))
+                H2_tank[i] = 0
+        except:
+            E_fc_bought.append(round(float(demand_kWh[i]), 3))
+        """
+
+    return H2_produced, Elyzer_loss, H2_tank, H2_demand, E_fc_demand, E_fc_loss, E_fc_sold, E_fc_bought
     pass
