@@ -1,0 +1,104 @@
+Storage Capacity:
+  - label: Electric Battery Supply
+    data:
+      location: battery_bank
+      index: Name
+      fields:
+        - GRID_kWh
+        - E_PV_gen_kWh
+        - E_av_sto_kWh
+    layout:
+      kind: bar
+      title: Electric energy availability
+      yTitle: "Energy [kWh/yr]"
+      xTitle: Building name
+
+  - label: Electricity Solar Supply
+    data:
+      location: battery_bank
+      index: Name
+      fields:
+        - E_PV_gen_kWh
+        - E_av_sto_kWh
+        - E_sto_PB_kWh
+    layout:
+      kind: bar
+      title: Stored electric energy
+      yTitle: "[kWh]"
+      xTitle: Building name
+
+  - label: Water Tank Heat Supply
+    data:
+      location: collector_performance
+      index: Name
+      fields:
+        - Qww_sys_kWh
+        - Q_SC_gen_kWh
+    layout:
+      kind: bar
+      title: Heat energy availability
+      yTitle: "[kWh]"
+      xTitle: Building name
+
+  - label: Heat Losses
+    data:
+      location: collector_performance
+      index: Name
+      fields:
+        - Q_SC_gen_kWh
+        - Qww_str_loss_kWh
+        - Qww_amb_loss_kWh
+    layout:
+      kind: bar
+      title: Solar Collector losses
+      yTitle: "[kWh/yr]"
+      xTitle: Building name
+
+  - label: Water Tanks Heat Supply
+    data:
+      location: collector_performance
+      index: Name
+      fields:
+        - Qww_sys_kWh
+        - Qww_conv_kWh
+    layout:
+      kind: bar
+      title: Solar Collector losses
+      yTitle: "[kWh/yr]"
+      xTitle: Building name
+
+  - label: Electrolyser performance 1
+    data:
+      location: hydrogen_production
+      index: Name
+      fields:
+        - H2_produced_kg
+    layout:
+      kind: bar
+      title: Electrolyser performance
+      yTitle: "[kg]"
+      xTitle: Building name
+
+  - label: Maximum hydrogen stored 1
+    data:
+      location: hydrogen_production
+      index: Name
+      fields:
+        - Max_stored_kg
+    layout:
+      kind: bar
+      title: Maximum hydrogen stored
+      yTitle: "[kg/day]"
+      xTitle: Building Name
+
+  - label: Carbon emissions avoided 1
+    data:
+      location: hydrogen_production
+      index: Name
+      fields:
+        - CO2_avoided_Ton
+    layout:
+      kind: bar
+      title: Hydrogen storage capacity
+      yTitle: "[Ton/yr]"
+      xTitle: Building Name
